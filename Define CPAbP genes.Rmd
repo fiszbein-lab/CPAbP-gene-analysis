@@ -1,0 +1,214 @@
+---
+title: "Define CPAbP genes"
+author: "Yun"
+date: "2023-08-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(GenomicRanges)
+library(tidyverse)
+library(GenomicAlignments)
+library(rtracklayer)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+
+```{r functions}
+
+merge_two_AFEPSIfiles <- function(AFEPSI1,AFEPSI2){
+  m_AFEPSI <- merge(AFEPSI1,AFEPSI2,by=c("gene","exon","strand"),all=T)
+  
+  #exon이 두 데이터셋중 하나만 존재하면 존재하는 값을 AFEPSI,HITindex로 사용
+  m_AFEPSI[is.na(m_AFEPSI$AFEPSI.x),'AFEPSI'] <- m_AFEPSI[is.na(m_AFEPSI$AFEPSI.x),'AFEPSI.y']
+  m_AFEPSI[is.na(m_AFEPSI$AFEPSI.y),'AFEPSI'] <- m_AFEPSI[is.na(m_AFEPSI$AFEPSI.y),'AFEPSI.x']
+  
+  m_AFEPSI[is.na(m_AFEPSI$AFEPSI.x),'AFEPSI'] <- m_AFEPSI[is.na(m_AFEPSI$AFEPSI.x),'AFEPSI.y']
+  m_AFEPSI[is.na(m_AFEPSI$AFEPSI.y),'AFEPSI'] <- m_AFEPSI[is.na(m_AFEPSI$AFEPSI.y),'AFEPSI.x']
+  
+  #take average if a exon exists in both .AFEPSI files
+  m_AFEPSI[is.na(m_AFEPSI$AFEPSI),'AFEPSI'] <-  (m_AFEPSI[is.na(m_AFEPSI$AFEPSI),'AFEPSI.x'] + m_AFEPSI[is.na(m_AFEPSI$AFEPSI),'AFEPSI.y']) / 2
+  
+  
+  m_AFEPSI[is.na(m_AFEPSI$HITindex.x),'HITindex'] <- m_AFEPSI[is.na(m_AFEPSI$HITindex.x),'HITindex.y']
+  m_AFEPSI[is.na(m_AFEPSI$HITindex.y),'HITindex'] <- m_AFEPSI[is.na(m_AFEPSI$HITindex.y),'HITindex.x']
+  
+  m_AFEPSI[is.na(m_AFEPSI$HITindex.x),'HITindex'] <- m_AFEPSI[is.na(m_AFEPSI$HITindex.x),'HITindex.y']
+  m_AFEPSI[is.na(m_AFEPSI$HITindex.y),'HITindex'] <- m_AFEPSI[is.na(m_AFEPSI$HITindex.y),'HITindex.x']
+  
+  m_AFEPSI[is.na(m_AFEPSI$HITindex),'HITindex'] <- (m_AFEPSI[is.na(m_AFEPSI$HITindex),'HITindex.x'] + m_AFEPSI[is.na(m_AFEPSI$HITindex),'HITindex.y']) / 2
+  
+  m_AFEPSI <- m_AFEPSI%>%select(gene,exon,strand,HITindex,AFEPSI)
+  return(m_AFEPSI)
+}
+
+merge_three_AFEPSIfiles <- function(AFEPSI1,AFEPSI2,AFEPSI3){
+  m2_AFEPSI <- merge_two_AFEPSIfiles(AFEPSI1,AFEPSI2)
+  
+  m_AFEPSI <- merge(m2_AFEPSI,AFEPSI3,by=c("gene","exon","strand"),all=T)
+    #exon이 두 데이터셋중 하나만 존재하면 존재하는 값을 AFEPSI,HITindex로 사용
+  m_AFEPSI[is.na(m_AFEPSI$AFEPSI.x),'AFEPSI'] <- m_AFEPSI[is.na(m_AFEPSI$AFEPSI.x),'AFEPSI.y']
+  m_AFEPSI[is.na(m_AFEPSI$AFEPSI.y),'AFEPSI'] <- m_AFEPSI[is.na(m_AFEPSI$AFEPSI.y),'AFEPSI.x']
+  
+  m_AFEPSI[is.na(m_AFEPSI$AFEPSI.x),'AFEPSI'] <- m_AFEPSI[is.na(m_AFEPSI$AFEPSI.x),'AFEPSI.y']
+  m_AFEPSI[is.na(m_AFEPSI$AFEPSI.y),'AFEPSI'] <- m_AFEPSI[is.na(m_AFEPSI$AFEPSI.y),'AFEPSI.x']
+  
+  #take average if a exon exists in both .AFEPSI files
+  m_AFEPSI[is.na(m_AFEPSI$AFEPSI),'AFEPSI'] <-  m_AFEPSI[is.na(m_AFEPSI$AFEPSI),'AFEPSI.x']*2/3 + m_AFEPSI[is.na(m_AFEPSI$AFEPSI),'AFEPSI.y'] / 3
+  
+  
+  m_AFEPSI[is.na(m_AFEPSI$HITindex.x),'HITindex'] <- m_AFEPSI[is.na(m_AFEPSI$HITindex.x),'HITindex.y']
+  m_AFEPSI[is.na(m_AFEPSI$HITindex.y),'HITindex'] <- m_AFEPSI[is.na(m_AFEPSI$HITindex.y),'HITindex.x']
+  
+  m_AFEPSI[is.na(m_AFEPSI$HITindex.x),'HITindex'] <- m_AFEPSI[is.na(m_AFEPSI$HITindex.x),'HITindex.y']
+  m_AFEPSI[is.na(m_AFEPSI$HITindex.y),'HITindex'] <- m_AFEPSI[is.na(m_AFEPSI$HITindex.y),'HITindex.x']
+  
+  m_AFEPSI[is.na(m_AFEPSI$HITindex),'HITindex'] <- m_AFEPSI[is.na(m_AFEPSI$HITindex),'HITindex.x'] *2/3 + m_AFEPSI[is.na(m_AFEPSI$HITindex),'HITindex.y'] / 3
+  
+  m_AFEPSI <- m_AFEPSI%>%select(gene,exon,strand,HITindex,AFEPSI)
+  
+  return(m_AFEPSI)
+}
+
+genomic_order_maker <- function(AFEPSI){
+  exons_trim <- AFEPSI%>%separate(exon,c("chr","coord"),sep=":",remove=F)%>%separate(coord,c("upper","lower"),sep="-",convert=T)%>%
+    select(chr,upper,lower,gene,strand,exon,AFEPSI)
+  positive <- exons_trim%>%filter(strand=="+")
+  negative <- exons_trim%>%filter(strand=="-")
+  
+  positive<-positive[order(positive$lower, decreasing=FALSE),]
+  positive$genomic_order <- ave(positive$lower, positive$gene, FUN = seq_along)
+  
+  negative<-negative[order(negative$upper, decreasing=TRUE),]
+  negative$genomic_order <- ave(negative$upper, negative$gene, FUN=seq_along)
+  
+  AFEPSI_go <- rbind(positive,negative)
+  AFEPSI_go <- AFEPSI_go%>%group_by(gene)%>%filter(n()>1)
+  
+  return(AFEPSI_go)
+}
+
+
+define_CPAbPgene <- function(AFEPSI_go,polyA_granges, use_only_first_PAS = T){
+  
+  AFEPSI_go2 <- AFEPSI_go%>%filter(genomic_order==2)
+  AFEPSI_go_m <- AFEPSI_go%>%filter(genomic_order==1)%>%merge(AFEPSI_go2,by=c("strand","gene","chr"),suffixes=c("_go1","_go2"))
+  AFEPSI_go_m_plus <- AFEPSI_go_m%>%filter(strand=="+")%>%select(gene,chr,upper_go1,upper_go2,strand,exon_go1,exon_go2,AFEPSI_go1,AFEPSI_go2)
+  colnames(AFEPSI_go_m_plus)[3:4] <- c("5'SS","3'SS")
+  AFEPSI_go_m_minus <- AFEPSI_go_m%>%filter(strand=="-")%>%select(gene,chr,lower_go2,lower_go1,strand,exon_go1,exon_go2,AFEPSI_go1,AFEPSI_go2)
+  colnames(AFEPSI_go_m_minus)[3:4] <- c("5'SS","3'SS")
+  AFEPSI_go_m <- rbind(AFEPSI_go_m_plus,AFEPSI_go_m_minus)
+
+  AFEPSI_granges <- makeGRangesFromDataFrame(AFEPSI_go_m,
+                                             keep.extra.columns=T,
+                                             ignore.strand=FALSE,
+                                             seqinfo=NULL,
+                                             seqnames.field="chr",
+                                             start.field="5'SS",
+                                             end.field="3'SS",
+                                             strand.field="strand",
+                                             starts.in.df.are.0based=F)
+  
+  
+  AFEPSI_polyA <- data.frame(findOverlapPairs(AFEPSI_granges,polyA_granges))
+  
+  if(use_only_first_PAS == F){
+    firstPAS_plus <- AFEPSI_polyA%>%group_by(first.gene)%>%filter(first.X.strand=="+")%>%
+    as.data.frame()%>%
+    select(first.X.seqnames,first.X.start, first.X.end, first.X.width ,first.X.strand, first.X.gene, first.X.exon_go1, first.X.exon_go2,second.start)
+  colnames(firstPAS_plus) <- c("chr","intron_start","intron_end","intron_width","strand","gene","exon_go1","exon_go2","PAS")
+  
+  firstPAS_minus <- AFEPSI_polyA%>%group_by(first.gene)%>%filter(first.X.strand=="-")%>%
+    as.data.frame()%>%
+    select(first.X.seqnames,first.X.end, first.X.start, first.X.width ,first.X.strand, first.X.gene, first.X.exon_go1,first.X.exon_go2,second.end)
+  colnames(firstPAS_minus) <- c("chr","intron_start","intron_end","intron_width","strand","gene","exon_go1","exon_go2","PAS")
+  }
+  else if(use_only_first_PAS == T){
+  firstPAS_plus <- AFEPSI_polyA%>%group_by(first.gene)%>%filter(first.X.strand=="+",second.start == min(second.start))%>%
+    as.data.frame()%>%
+    select(first.X.seqnames,first.X.start, first.X.end, first.X.width ,first.X.strand, first.X.gene, first.X.exon_go1, first.X.exon_go2,second.start)
+  colnames(firstPAS_plus) <- c("chr","intron_start","intron_end","intron_width","strand","gene","exon_go1","exon_go2","PAS")
+  
+  firstPAS_minus <- AFEPSI_polyA%>%group_by(first.gene)%>%filter(first.X.strand=="-",second.end == max(second.end))%>%
+    as.data.frame()%>%
+    select(first.X.seqnames,first.X.end,first.X.start,  first.X.width ,first.X.strand, first.X.gene, first.X.exon_go1,first.X.exon_go2,second.end)
+  colnames(firstPAS_minus) <- c("chr","intron_end","intron_start","intron_width","strand","gene","exon_go1","exon_go2","PAS")
+  }
+  CPAbP_w_PAS_info <- rbind(firstPAS_plus,firstPAS_minus)
+  CPAbP_w_PAS_info$PAS_to_3SS <- abs(CPAbP_w_PAS_info$PAS - CPAbP_w_PAS_info$intron_start) 
+
+  return(CPAbP_w_PAS_info)
+}
+```
+
+
+```{r load AFEPSI files}
+#import AFEPSI files from HITindex pipeline
+AFEPSI_ctrl1 <- read.table("HITindex_outcome/ctrl_1.AFEPSI", header = T)
+AFEPSI_ctrl2 <- read.table("HITindex_outcome/ctrl_2.AFEPSI", header = T)
+AFEPSI_u1amo1 <- read.table("HITindex_outcome/u1amo_1.AFEPSI", header = T)
+AFEPSI_u1amo2 <- read.table("HITindex_outcome/u1amo_2.AFEPSI", header = T)
+AFEPSI_u1amo3 <- read.table("HITindex_outcome/u1amo_3.AFEPSI", header = T)
+
+#merge all AFEPSI files
+m_ctrl <- merge_two_AFEPSIfiles(AFEPSI_ctrl1,AFEPSI_ctrl2)
+m_u1amo <- merge_three_AFEPSIfiles(AFEPSI_u1amo1,AFEPSI_u1amo2,AFEPSI_u1amo3)
+m_all <- merge_two_AFEPSIfiles(m_ctrl,m_u1amo)
+
+#annotate genomic orders and select genes with at least two alternative promoters
+m_all_w_go <- genomic_order_maker(m_all)
+```
+
+
+
+```{r load polyA dataset}
+#import polyA atlas data
+polyA_atlas <- read.table("atlas.clusters.2.0.GRCh38.96.bed")
+colnames(polyA_atlas)[1:6] <- c("chr", "start", "end", "ID", "ave_tpm", "strand")
+
+#generate grange from polyA data
+polyA_atlas_granges <- makeGRangesFromDataFrame(polyA_atlas,
+                                          keep.extra.columns=F,
+                                          ignore.strand=FALSE,
+                                          seqinfo=NULL,
+                                          seqnames.field="chr",
+                                          start.field="start",
+                                          end.field="end",
+                                          strand.field="strand",
+                                          starts.in.df.are.0based=T)
+
+
+
+#import polyA-seq results
+increased_polyA_site <- read.table("polyA_peak_Oh_etal.bed",header = T)
+
+#remove "chr" from chromosome info
+increased_polyA_site$seqnames <- gsub("chr",replacement = "", increased_polyA_site$seqnames)
+
+#generate grange from polyA data
+u1dependent_polyA_granges <- makeGRangesFromDataFrame(increased_polyA_site,
+                                         keep.extra.columns=F,
+                                         ignore.strand=T,
+                                         seqinfo=NULL,
+                                         seqnames.field="seqnames",
+                                         start.field="start",
+                                         end.field="end",
+                                         strand.field="strand",
+                                         starts.in.df.are.0based=T)
+
+```
+
+
+
+```{r}
+#define CPAbP gene and get exon coordinates
+CPAbP <- define_CPAbPgene(m_all_w_go, polyA_atlas_granges,use_only_first_PAS = T)
+u1_dependent_CPAbP <- define_CPAbPgene(m_all_w_go, u1dependent_polyA_granges,use_only_first_PAS = T)
+```
+
