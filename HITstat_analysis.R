@@ -2,14 +2,14 @@ library(tidyverse)
 library(reshape2)
 library(ggpubr)
 
-setwd("/projectnb/encore/Yun/")
+setwd("data/")
 
 #load HITindex outcome
-HITstat_ctrl_vs_u1amo <- read.table("HITindex_stat/HITindex_stat_ctrl_vs_u1amo",header = T)
+HITstat_ctrl_vs_u1amo <- read.table("HITindex_stat_ctrl_vs_u1amo",header = T)
 head(HITstat_ctrl_vs_u1amo)
 
 #load annotation file for CPAbP classification
-all_bed <- read.table("/restricted/projectnb/hybrids/Yun_data/TSS_files/all_2560genes_w_atleast_two_AFE_v3_231109.txt",header = T)
+all_bed <- read.table("HeLa_genes_with_atleast_2promoters.txt",header = T)
 m_all_bed <- melt(all_bed,measure.vars = c("exon_go1","exon_go2"),value.name = "exon",variable.name = "genomic_order")
 
 #classification
