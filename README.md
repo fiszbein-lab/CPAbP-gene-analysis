@@ -1,4 +1,4 @@
-# Promoter Activity Analysis for CPAbP and nonCPAbP Genes
+## Promoter Activity Analysis for CPAbP and nonCPAbP Genes
 
 This repository contains a collection of R scripts and R Markdown notebooks used to analyze **promoter activities of CPAbP (Cleavage and Polyadenylation site–Associated Promoter Binding) and nonCPAbP genes** for the accompanying publication.
 
@@ -6,7 +6,7 @@ The analyses include gene classification, read quantification near promoters, di
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 - **`Define_CPAbP_genes.Rmd`**
   - Identifies CPAbP and nonCPAbP genes from annotated gene models.
@@ -25,10 +25,15 @@ The analyses include gene classification, read quantification near promoters, di
   - Generates metagene plots of read enrichment across TSS regions of different gene groups.
   - Useful for visualizing global promoter behavior.
 
+---
 
+## Author
+
+GyeungYun Kim
 
 ---
 
-## Contact
+## Cite
 
-For 
+If you use this script in your research, please cite: Kim et al., Mol Cell, 2025.
+
