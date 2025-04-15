@@ -17,8 +17,6 @@ nonCPAbP_go1 <- m_all_bed%>%filter(CPAbP=="N", U1_dependent_CPAbP == "N",genomic
 nonCPAbP_go2 <- m_all_bed%>%filter(CPAbP=="N", U1_dependent_CPAbP == "N",genomic_order=="exon_go2")
 CPAbP_go1 <- m_all_bed%>%filter(CPAbP=="Y",genomic_order=="exon_go1")
 CPAbP_go2 <- m_all_bed%>%filter(CPAbP=="Y",genomic_order=="exon_go2")
-u1d_CPAbP_go1 <- m_all_bed%>%filter(U1_dependent_CPAbP == "Y",genomic_order=="exon_go1")
-u1d_CPAbP_go2 <- m_all_bed%>%filter(U1_dependent_CPAbP == "Y",genomic_order=="exon_go2")
 
 
 #annotate HITstat outcome and normalize to the mean delta_PSI of genomic_order1
@@ -32,14 +30,10 @@ HITstat_CPAbP_go2 <- HITstat_ctrl_vs_u1amo%>%subset(exon %in% CPAbP_go2$exon)%>%
 HITstat_CPAbP <- rbind(HITstat_CPAbP_go1,HITstat_CPAbP_go2)
 HITstat_CPAbP$delta_PSI <- HITstat_CPAbP$delta_PSI - median(HITstat_CPAbP_go1$delta_PSI)
 
-HITstat_u1d_CPAbP_go1 <- HITstat_ctrl_vs_u1amo%>%subset(exon %in% u1d_CPAbP_go1$exon)%>%mutate(group="u1d_CPAbP",genomic_order = "1")%>%filter(bio_significant=="True")
-HITstat_u1d_CPAbP_go2 <- HITstat_ctrl_vs_u1amo%>%subset(exon %in% u1d_CPAbP_go2$exon)%>%mutate(group="u1d_CPAbP",genomic_order = "2")%>%filter(bio_significant=="True")
-HITstat_u1d_CPAbP <- rbind(HITstat_u1d_CPAbP_go1,HITstat_u1d_CPAbP_go2)
-HITstat_u1d_CPAbP$delta_PSI <- HITstat_u1d_CPAbP$delta_PSI - median(HITstat_u1d_CPAbP_go1$delta_PSI)
 
 #combine normalized results from each group
-combined_HITstat <- rbind(HITstat_nonCPAbP,HITstat_CPAbP,HITstat_u1d_CPAbP)
-combined_HITstat$group <- factor(combined_HITstat$group, levels=c("nonCPAbP","CPAbP","u1d_CPAbP"))
+combined_HITstat <- rbind(HITstat_nonCPAbP,HITstat_CPAbP)
+combined_HITstat$group <- factor(combined_HITstat$group, levels=c("nonCPAbP","CPAbP"))
 
 #generate boxplot with t-test
 ggplot(combined_HITstat, aes(x=group,y=delta_PSI,fill=genomic_order))+geom_boxplot(notch=T)+theme_minimal()+
