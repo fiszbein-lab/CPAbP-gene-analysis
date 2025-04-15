@@ -1,0 +1,165 @@
+---
+title: "Differential Analysis for reads around nonCPAbP/CPAbP promoters"
+author: "Yun"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(Rsubread)
+library(tidyverse)
+library(ggpubr)
+library(reshape2)
+library(DESeq2)
+library(here)
+```
+
+### Define Base Paths
+```{r paths}
+data_dir <- here("data")
+bam_dir <- file.path(data_dir, "bamfiles")
+featurecounts_dir <- file.path(data_dir, "featureCounts")
+output_dir <- here("results")
+
+dir.create(featurecounts_dir, recursive = TRUE, showWarnings = FALSE)
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+### Helper Function
+```{r}
+window_to_look_at <- function(exon, up_bp, down_bp) {
+  exon_plus <- exon %>% filter(strand == "+")
+  exon_plus$lower <- exon_plus$upper + down_bp
+  exon_plus$upper <- exon_plus$upper + up_bp
+
+  exon_minus <- exon %>% filter(strand == "-")
+  exon_minus$upper <- exon_minus$lower - down_bp
+  exon_minus$lower <- exon_minus$lower - up_bp
+
+  exon <- bind_rows(exon_plus, exon_minus) %>%
+    select(ID, chr, upper, lower, strand)
+
+  data.frame(
+    GeneID = exon$ID,
+    Chr = exon$chr,
+    Start = exon$upper,
+    End = exon$lower,
+    Strand = exon$strand
+  )
+}
+```
+
+### Load and Preprocess Input Data
+```{r}
+all_bed <- read.table(
+  file.path(data_dir, "HeLa_genes_with_atleast_2promoters.txt"),
+  header = TRUE
+)
+
+m_all_bed <- melt(
+  all_bed,
+  measure.vars = c("exon_go1", "exon_go2"),
+  value.name = "exon",
+  variable.name = "genomic_order"
+) %>%
+  separate(exon, into = c("chr", "coordinate"), sep = ":") %>%
+  separate(coordinate, into = c("upper", "lower"), sep = "-", convert = TRUE)
+
+nonCPAbP <- m_all_bed %>%
+  filter(CPAbP == "N") %>%
+  mutate(ID = paste0(gene, "-nonCPAbP", gsub("exon", "", genomic_order)))
+
+CPAbP <- m_all_bed %>%
+  filter(CPAbP == "Y") %>%
+  mutate(ID = paste0(gene, "-CPAbP", gsub("exon", "", genomic_order)))
+
+prom_region <- bind_rows(nonCPAbP, CPAbP) %>% window_to_look_at(-200, 100)
+```
+
+### Count Reads with featureCounts
+```{r}
+count_reads <- function(bam_path, regions_to_look) {
+  res <- featureCounts(
+    bam_path,
+    annot.ext = regions_to_look,
+    strandSpecific = 1,
+    reportReads = "CORE",
+    minOverlap = 10,
+    isPairedEnd = TRUE,
+    reportReadsPath = featurecounts_dir
+  )
+
+  counts <- as.data.frame(res$counts)
+  counts$ID <- rownames(counts)
+
+  counts %>%
+    separate(ID, into = c("gene", "group"), sep = "-") %>%
+    separate(group, into = c("group", "genomic_order"), sep = "_")
+}
+```
+
+```{r}
+samples <- list(
+  PRO_ctrl1 = "Ctrl1_sorted.bam",
+  PRO_ctrl2 = "Ctrl2_sorted.bam",
+  PRO_ctrl3 = "Ctrl3_sorted.bam",
+  PRO_u1amo1 = "U1-1_sorted.bam",
+  PRO_u1amo2 = "U1-2_sorted.bam",
+  PRO_u1amo3 = "U1-3_sorted.bam"
+)
+
+read_counts <- lapply(samples, function(bam) {
+  count_reads(file.path(bam_dir, bam), prom_region)
+})
+
+pro_combined <- read_counts[[1]][, "gene", drop = FALSE]
+for (i in seq_along(read_counts)) {
+  pro_combined[[names(read_counts)[i]]] <- read_counts[[i]][, 1]
+}
+
+write.table(
+  pro_combined,
+  file.path(output_dir, "promoter_read_counts_combined.txt"),
+  sep = "\t",
+  quote = FALSE,
+  row.names = FALSE,
+  col.names = TRUE
+)
+```
+
+### Differential Expression Analysis
+```{r}
+df_for_deseq <- pro_combined[, -1]
+
+coldata <- data.frame(
+  condition = factor(c(rep("ctrl", 3), rep("u1amo", 3))),
+  row.names = colnames(df_for_deseq)
+)
+
+dds <- DESeqDataSetFromMatrix(
+  countData = df_for_deseq,
+  colData = coldata,
+  design = ~ condition
+)
+dds <- DESeq(dds)
+res <- as.data.frame(results(dds))
+res$gene <- pro_combined$gene
+```
+
+### Plot Results
+```{r}
+res_annotated <- merge(res, all_bed[, c("gene", "group", "genomic_order", "width")], by = "gene")
+
+res_filtered <- res_annotated %>%
+  filter(pvalue < 0.05, width > 3000, group %in% c("nonCPAbP", "CPAbP")) %>%
+  mutate(group = factor(group, levels = c("nonCPAbP", "CPAbP")))
+
+ggplot(res_filtered, aes(x = group, y = log2FoldChange, fill = genomic_order)) +
+  geom_boxplot(notch = FALSE) +
+  coord_cartesian(ylim = c(-4, 4)) +
+  theme_minimal() +
+  scale_fill_manual(values = c("lavenderblush4", "lightseagreen")) +
+  stat_compare_means(method = "wilcox.test") +
+  labs(title = "Differential Reads Around Promoter Regions", x = "Promoter Group", y = "Log2 Fold Change")
