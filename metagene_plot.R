@@ -74,15 +74,6 @@ TSS_list_CPAbPnonCPAbP <- GRangesList(grange_nonCPAbP_go1,grange_nonCPAbP_go2,gr
 names(TSS_list_CPAbPnonCPAbP) <- c("nonCPAbP_GO1","nonCPAbP_GO2","CPAbP_GO1","CPAbP_GO2")
 
 
-##generate Granges for coordinates of up/down 300nt from TSS - antisense
-anti_grange_nonPABP_go1 <- antisense_generate_bin_around_TSS(TSS_nonpolyA_go1)
-anti_grange_nonPABP_go2 <- antisense_generate_bin_around_TSS(TSS_nonpolyA_go2)
-anti_grange_PABP_go1 <- antisense_generate_bin_around_TSS(TSS_polyA_go1)
-anti_grange_PABP_go2 <- antisense_generate_bin_around_TSS(TSS_polyA_go2)
-anti_TSS_list_CPAbPnonCPAbP <- GRangesList(anti_grange_nonPABP_go1,anti_grange_nonPABP_go2,anti_grange_PABP_go1,anti_grange_PABP_go2)
-names(anti_TSS_list_CPAbPnonCPAbP) <- c("nonCPAbP_GO1","nonCPAbP_GO2","CPAbP_GO1","CPAbP_GO2")
-
-
 #import BAM files to look at
 bamlist <- c("ctrl1.bam","ctrl2.bam",
              "u1amo1.bam","u1amo2.bam")
