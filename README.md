@@ -4,6 +4,8 @@ This repository contains a collection of R scripts and R Markdown notebooks used
 
 The analyses include gene classification, read quantification near promoters, differential expression testing, and metagene visualization. All code is designed to be reproducible and modular.
 
+Additional information or data used for the analysis is available upon request.
+
 ---
 
 ## Repository Structure
